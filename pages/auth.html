@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auth & Profile - AgarthianRot</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding: 40px 20px;
+            box-sizing: border-box;
+            margin: 0;
+            background-color: #1a1a1a;
+            color: white;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .header a {
+            color: #FF6B6B;
+            text-decoration: none;
+            font-weight: bold;
+            transition: color 0.2s ease;
+        }
+
+        .header a:hover {
+            color: #845EC2;
+        }
+
+        h1,
+        h2,
+        h3 {
+            margin-top: 0;
+        }
+
+        .card {
+            background-color: #2a2a2a;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            margin-bottom: 20px;
+            display: none;
+            /* Sections are hidden by JS initially */
+        }
+
+        .card.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #444;
+            border-radius: 6px;
+            background-color: #333;
+            color: white;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+
+        button {
+            background-color: #845EC2;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            transition: all 0.2s ease;
+            width: 100%;
+        }
+
+        button:hover {
+            background-color: #FF6B6B;
+        }
+
+        button:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        .button-secondary {
+            background-color: transparent;
+            border: 1px solid #444;
+            margin-top: 10px;
+        }
+
+        .button-secondary:hover {
+            background-color: #333;
+            border-color: #845EC2;
+        }
+
+        .button-danger {
+            background-color: #2a2a2a;
+            border: 1px solid #FF6B6B;
+            color: #FF6B6B;
+            margin-top: 20px;
+        }
+
+        .button-danger:hover {
+            background-color: #FF6B6B;
+            color: white;
+        }
+
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #333;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 20px;
+        }
+
+        /* Styling the raw checkbox to look like a toggle */
+        input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            accent-color: #845EC2;
+            cursor: pointer;
+        }
+
+        .message {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+            display: none;
+        }
+
+        .message.error {
+            background-color: rgba(255, 107, 107, 0.2);
+            color: #FF6B6B;
+            border: 1px solid #FF6B6B;
+            display: block;
+        }
+
+        .message.success {
+            background-color: rgba(132, 94, 194, 0.2);
+            color: #b592f6;
+            border: 1px solid #845EC2;
+            display: block;
+        }
+
+        .loader {
+            text-align: center;
+            color: #845EC2;
+            font-weight: bold;
+            padding: 40px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Account</h1>
+            <a href="../index.html">&larr; Back to Home</a>
+        </div>
+
+        <div id="loadingView" class="card active">
+            <div class="loader">Verifying session...</div>
+        </div>
+
+        <!-- AUTH VIEW (Shows if logged out) -->
+        <div id="authView" class="card">
+            <h2 id="authTitle">Log In</h2>
+            <p style="color: #aaa; margin-bottom: 20px;">Enter your details to access your profile.</p>
+
+            <form id="authForm">
+                <div class="form-group" id="nameGroup" style="display: none;">
+                    <label for="displayName">Display Name</label>
+                    <input type="text" id="displayName" placeholder="What should we call you?">
+                </div>
+                <div class="form-group">
+                    <label for="email">Email address</label>
+                    <input type="email" id="email" required placeholder="you@example.com">
+                </div>
+                <div class="form-group" style="margin-bottom: 10px;">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" required minlength="6" placeholder="••••••••">
+                </div>
+                <div style="text-align: right; margin-bottom: 20px;">
+                    <a href="#" id="forgotPasswordLink"
+                        style="color: #845EC2; text-decoration: none; font-size: 0.9rem;">Forgot Password?</a>
+                </div>
+
+                <button type="submit" id="authSubmitBtn">Log In</button>
+            </form>
+
+            <button class="button-secondary" id="toggleAuthModeBtn">Need an account? Sign Up</button>
+            <div id="authMessage" class="message"></div>
+        </div>
+
+        <!-- RECOVERY VIEW (Send Reset Email) -->
+        <div id="recoveryView" class="card">
+            <h2>Reset Password</h2>
+            <p style="color: #aaa; margin-bottom: 20px;">Enter your email and we'll send you a link to reset your
+                password.</p>
+
+            <form id="recoveryForm">
+                <div class="form-group">
+                    <label for="recoveryEmail">Email address</label>
+                    <input type="email" id="recoveryEmail" required placeholder="you@example.com">
+                </div>
+                <button type="submit" id="recoverySubmitBtn">Send Reset Link</button>
+            </form>
+
+            <button class="button-secondary" id="backToLoginBtn">Back to Log In</button>
+            <div id="recoveryMessage" class="message"></div>
+        </div>
+
+        <!-- UPDATE PASSWORD VIEW (Show when returning from email link) -->
+        <div id="updatePasswordView" class="card">
+            <h2>Create New Password</h2>
+            <p style="color: #aaa; margin-bottom: 20px;">Please enter your new password below.</p>
+
+            <form id="updatePasswordForm">
+                <div class="form-group">
+                    <label for="newPassword">New Password</label>
+                    <input type="password" id="newPassword" required minlength="6" placeholder="••••••••">
+                </div>
+                <button type="submit" id="updatePasswordBtn">Update Password</button>
+            </form>
+            <div id="updatePasswordMessage" class="message"></div>
+        </div>
+
+        <!-- DASHBOARD VIEW (Shows if logged in) -->
+        <div id="dashboardView" class="card">
+            <h2>Your Profile</h2>
+            <div style="background: #333; padding: 20px; border-radius: 6px; margin-bottom: 20px;">
+                <p style="margin: 0 0 10px 0; color: #aaa;">Logged in as:</p>
+                <h3 id="profileName" style="margin: 0; color: #845EC2; font-size: 1.5rem;">Loading...</h3>
+                <p id="profileEmail" style="margin: 5px 0 0 0; color: #aaa; font-size: 0.9rem;"></p>
+            </div>
+
+            <div id="dashboardMessage" class="message"></div>
+
+            <button class="button-danger" id="logoutBtn">Log Out</button>
+        </div>
+    </div>
+
+    <!-- Firebase SDK Setup -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail, updateProfile } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
+
+        // Import your existing config from js/ folder
+        import firebaseConfig from '../js/firebaseConfig.js';
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        // UI Elements
+        const loadingView = document.getElementById('loadingView');
+        const authView = document.getElementById('authView');
+        const dashboardView = document.getElementById('dashboardView');
+        const recoveryView = document.getElementById('recoveryView');
+
+        // Auth Form Elements
+        const authForm = document.getElementById('authForm');
+        const authTitle = document.getElementById('authTitle');
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const nameGroup = document.getElementById('nameGroup');
+        const displayNameInput = document.getElementById('displayName');
+        const authSubmitBtn = document.getElementById('authSubmitBtn');
+        const toggleAuthModeBtn = document.getElementById('toggleAuthModeBtn');
+        const authMessage = document.getElementById('authMessage');
+
+        // Dashboard Elements
+        const profileName = document.getElementById('profileName');
+        const profileEmail = document.getElementById('profileEmail');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const dashboardMessage = document.getElementById('dashboardMessage');
+
+        // Forgot Password Elements
+        const forgotPasswordLink = document.getElementById('forgotPasswordLink');
+        const recoveryForm = document.getElementById('recoveryForm');
+        const recoveryEmail = document.getElementById('recoveryEmail');
+        const recoverySubmitBtn = document.getElementById('recoverySubmitBtn');
+        const backToLoginBtn = document.getElementById('backToLoginBtn');
+        const recoveryMessage = document.getElementById('recoveryMessage');
+
+        let isSignUpMode = false;
+
+        // --- View Management ---
+        function showView(viewElement) {
+            loadingView.classList.remove('active');
+            authView.classList.remove('active');
+            dashboardView.classList.remove('active');
+            recoveryView.classList.remove('active');
+            // updatePasswordView is removed because Firebase hosts that page for us!
+            // However it might still be in the HTML above this script, we just ignore it.
+            const updatePasswordView = document.getElementById('updatePasswordView');
+            if (updatePasswordView) updatePasswordView.classList.remove('active');
+
+            viewElement.classList.add('active');
+        }
+
+        function showMessage(element, text, type) {
+            element.textContent = text;
+            element.className = `message ${type}`;
+            setTimeout(() => { if (element.className.includes(type)) element.className = 'message'; }, 8000);
+        }
+
+        // --- Firebase Auth State Listener ---
+        // This automatically fires when the page loads, and anytime the user logs in/out.
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // User is signed in.
+                profileEmail.textContent = user.email;
+                profileName.textContent = escapeHtml(user.displayName || "Unknown User");
+                showView(dashboardView);
+            } else {
+                // No user is signed in.
+                showView(authView);
+            }
+        });
+
+        // --- Toggle Login/Signup UI ---
+        toggleAuthModeBtn.addEventListener('click', () => {
+            isSignUpMode = !isSignUpMode;
+            authMessage.className = 'message'; // Clear msgs
+            authForm.reset();
+
+            if (isSignUpMode) {
+                authTitle.textContent = "Create Account";
+                authSubmitBtn.textContent = "Sign Up";
+                toggleAuthModeBtn.textContent = "Already have an account? Log In";
+                nameGroup.style.display = "block";
+                displayNameInput.required = true;
+            } else {
+                authTitle.textContent = "Log In";
+                authSubmitBtn.textContent = "Log In";
+                toggleAuthModeBtn.textContent = "Need an account? Sign Up";
+                nameGroup.style.display = "none";
+                displayNameInput.required = false;
+            }
+        });
+
+        // --- Handle Auth Form Submit ---
+        authForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            authSubmitBtn.disabled = true;
+            const originalBtnText = authSubmitBtn.textContent;
+            authSubmitBtn.textContent = "Processing...";
+            authMessage.className = 'message';
+
+            const email = emailInput.value.trim();
+            const password = passwordInput.value;
+            const displayName = displayNameInput.value.trim();
+
+            try {
+                if (isSignUpMode) {
+                    // Create User in Firebase
+                    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+
+                    // Attach the Display Name to the newly created Firebase User
+                    await updateProfile(userCredential.user, {
+                        displayName: displayName
+                    });
+
+                    // We do not need to call checkSession() or showView(). 
+                    // The onAuthStateChanged listener at the top handles showing the dashboard automatically!
+
+                } else {
+                    // Log In User in Firebase
+                    await signInWithEmailAndPassword(auth, email, password);
+
+                    // Again, onAuthStateChanged will handle the view switch!
+                }
+            } catch (error) {
+                console.error(error);
+                // Firebase error messages look like "auth/wrong-password". Let's clean it up roughly:
+                let errorMsg = error.message.replace('Firebase:', '').trim();
+                showMessage(authMessage, errorMsg, "error");
+            } finally {
+                authSubmitBtn.disabled = false;
+                authSubmitBtn.textContent = originalBtnText;
+            }
+        });
+
+        // --- Forgot Password Flow ---
+        forgotPasswordLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            recoveryForm.reset();
+            recoveryMessage.className = 'message';
+            showView(recoveryView);
+        });
+
+        backToLoginBtn.addEventListener('click', () => {
+            showView(authView);
+        });
+
+        // Send the reset email
+        recoveryForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            recoverySubmitBtn.disabled = true;
+            recoverySubmitBtn.textContent = "Sending...";
+            recoveryMessage.className = 'message';
+
+            const email = recoveryEmail.value.trim();
+
+            try {
+                // Firebase handles sending the email AND hosting the actual password reset page.
+                // We don't have to define a redirectUrl or build an updatePassword view!
+                await sendPasswordResetEmail(auth, email);
+                showMessage(recoveryMessage, "Password reset link sent! Check your inbox.", "success");
+            } catch (error) {
+                console.error("Reset error:", error);
+                let errorMsg = error.message.replace('Firebase:', '').trim();
+                showMessage(recoveryMessage, errorMsg, "error");
+            } finally {
+                recoverySubmitBtn.disabled = false;
+                recoverySubmitBtn.textContent = "Send Reset Link";
+            }
+        });
+
+        // --- Handle Logout ---
+        logoutBtn.addEventListener('click', async () => {
+            logoutBtn.disabled = true;
+            logoutBtn.textContent = "Logging out...";
+
+            try {
+                await signOut(auth);
+                // onAuthStateChanged will auto-trigger and show the Login view!
+            } catch (error) {
+                console.error("Logout error:", error);
+                showMessage(dashboardMessage, "Failed to log out.", "error");
+            } finally {
+                logoutBtn.disabled = false;
+                logoutBtn.textContent = "Log Out";
+            }
+        });
+
+        // Helper function to prevent Cross-Site Scripting (XSS)
+        function escapeHtml(unsafe) {
+            if (!unsafe) return "";
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+
+</html>

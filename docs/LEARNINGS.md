@@ -34,3 +34,12 @@
   2. **Database:** Save the image title and the `Public URL` to the `gallery` table.
   3. **Read:** Query the table and inject `<img>` tags.
 - **Security (RLS):** By default, Supabase blocks uploads. Created a Storage Policy allowing `INSERT` access for all (`true`) to allow public gallery uploads.
+
+## 5. Vercel Environment Variables
+- **Problem:** Secure API keys (`firebaseConfig.js`, `supabaseConfig.js`) cannot be committed to GitHub, which means Vercel won't have the files to run the live site.
+- **Solution:** Inject the files dynamically during deployment.
+- **Implementation:**
+  1. Add the raw contents of both files as Environment Variables in the Vercel Dashboard (e.g. `FIREBASE_CONFIG_CONTENT`).
+  2. Create a `vercel.json` file in the repository.
+  3. Under `buildCommand`, use `echo` to write the contents of the Vercel Variables directly into new `.js` files right before the website goes live.
+  4. The code runs securely without the keys ever existing in source control.
