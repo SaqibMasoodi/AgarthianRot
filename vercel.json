@@ -1,0 +1,4 @@
+{
+  "buildCommand": "echo \"$FIREBASE_CONFIG_CONTENT\" > firebaseConfig.js && echo \"$SUPABASE_CONFIG_CONTENT\" > supabaseConfig.js",
+  "outputDirectory": "."
+}
