@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notes - AgarthianRot</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding: 40px 20px;
+            box-sizing: border-box;
+            margin: 0;
+            background-color: #1a1a1a;
+            color: white;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .header a {
+            color: #FF6B6B;
+            text-decoration: none;
+            font-weight: bold;
+            transition: color 0.2s ease;
+        }
+
+        .header a:hover {
+            color: #845EC2;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin: 0;
+        }
+
+        .form-container {
+            background-color: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            background-color: #333;
+            color: white;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        button {
+            background-color: #845EC2;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            transition: background-color 0.2s ease;
+        }
+
+        button:hover {
+            background-color: #FF6B6B;
+        }
+
+        button:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+        }
+
+        .notes-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .note-card {
+            background-color: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s ease;
+        }
+
+        .note-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .note-card h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: #FF6B6B;
+        }
+
+        .note-card p {
+            margin: 0;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+
+        .note-card .date {
+            font-size: 0.8rem;
+            color: #aaa;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        #loading {
+            text-align: center;
+            color: #845EC2;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Notes / Blog</h1>
+            <a href="index.html">&larr; Back to Home</a>
+        </div>
+
+        <div class="form-container">
+            <h2 style="margin-top: 0;">Add a New Note</h2>
+            <form id="noteForm">
+                <div class="form-group">
+                    <label for="title">Title</label>
+                    <input type="text" id="title" required placeholder="Enter note title...">
+                </div>
+                <div class="form-group">
+                    <label for="content">Content</label>
+                    <textarea id="content" required placeholder="Write your note/blog post here..."></textarea>
+                </div>
+                <button type="submit" id="submitBtn">Save Note</button>
+            </form>
+        </div>
+
+        <h2>Recent Notes</h2>
+        <div id="loading">Loading notes...</div>
+        <div class="notes-list" id="notesList">
+            <!-- Notes will be injected here by JavaScript -->
+        </div>
+    </div>
+
+    <!-- Firebase SDK Setup -->
+    <!-- Note: Using ES modules format supported by modern browsers -->
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
+
+        // Import the config from the external file
+        import firebaseConfig from './firebaseConfig.js';
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+
+        // Initialize Cloud Firestore and get a reference to the service
+        const db = getFirestore(app);
+
+        // DOM Elements
+        const noteForm = document.getElementById('noteForm');
+        const titleInput = document.getElementById('title');
+        const contentInput = document.getElementById('content');
+        const submitBtn = document.getElementById('submitBtn');
+        const notesList = document.getElementById('notesList');
+        const loading = document.getElementById('loading');
+
+        // Handle Form Submission
+        noteForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const title = titleInput.value.trim();
+            const content = contentInput.value.trim();
+
+            if (!title || !content) return;
+
+            // Change button state to indicate saving
+            const originalBtnText = submitBtn.innerText;
+            submitBtn.innerText = "Saving...";
+            submitBtn.disabled = true;
+
+            try {
+                // Add a new document to the "notes" collection
+                await addDoc(collection(db, "notes"), {
+                    title: title,
+                    content: content,
+                    createdAt: serverTimestamp()
+                });
+
+                // Form reset on success
+                noteForm.reset();
+            } catch (error) {
+                console.error("Error adding document: ", error);
+                alert("Error saving note. Did you configure your Firebase credentials successfully? See console for details.");
+            } finally {
+                // Restore button state
+                submitBtn.innerText = originalBtnText;
+                submitBtn.disabled = false;
+            }
+        });
+
+        // Listen for real-time updates to the "notes" collection
+        try {
+            const q = query(collection(db, "notes"), orderBy("createdAt", "desc"));
+            onSnapshot(q, (snapshot) => {
+                loading.style.display = 'none';
+                notesList.innerHTML = '';
+
+                if (snapshot.empty) {
+                    notesList.innerHTML = '<p style="text-align: center; color: #aaa;">No notes yet. Add one above!</p>';
+                    return;
+                }
+
+                snapshot.forEach((doc) => {
+                    const note = doc.data();
+                    const dateObj = note.createdAt ? note.createdAt.toDate() : new Date();
+                    const dateStr = dateObj.toLocaleDateString() + ' ' + dateObj.toLocaleTimeString();
+
+                    const noteEl = document.createElement('div');
+                    noteEl.className = 'note-card';
+                    noteEl.innerHTML = `
+                        <h3>${escapeHtml(note.title)}</h3>
+                        <span class="date">${dateStr}</span>
+                        <p>${escapeHtml(note.content)}</p>
+                    `;
+                    notesList.appendChild(noteEl);
+                });
+            }, (error) => {
+                console.error("Error fetching notes: ", error);
+                loading.style.display = 'none';
+                notesList.innerHTML = '<p style="color: #FF6B6B; text-align: center; padding: 20px; background: #2a2a2a; border-radius: 8px;">Error loading notes from Firebase.<br>Please make sure you have added your valid Firebase Config in notes.html.<br>Also ensure your Firestore Database rules allow read/write.</p>';
+            });
+        } catch (error) {
+            console.error("Setup error: ", error);
+            loading.style.display = 'none';
+            notesList.innerHTML = '<p style="color: #FF6B6B; text-align: center;">Configuration Error. Please set up your Firebase credentials in the code.</p>';
+        }
+
+        // Helper function to prevent Cross-Site Scripting (XSS)
+        function escapeHtml(unsafe) {
+            if (!unsafe) return "";
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+
+</html>
